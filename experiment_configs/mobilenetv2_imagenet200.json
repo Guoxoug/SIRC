@@ -1,0 +1,125 @@
+{
+    "model": {
+        "model_type": "mobilenetv2",
+        "model_params": {
+            "num_classes": 200
+        },
+        "weights_path": "models/saved_models/mobilenetv2_imagenet200"
+    },
+    "id_dataset": {
+        "name": "imagenet200",
+        "datapath": "/path/to/dataset",
+        "download": false,
+        "batch_size": 256,
+        "test_batch_size": 512,
+        "num_workers": 4,
+        "drop_last": false,
+        "val_size": 0,
+        "num_classes": 200
+    },
+    "ood_datasets": [
+        {
+            "name": "near-imagenet200",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "caltech256",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "openimage-o",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "inaturalist",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "textures",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "colonoscopy",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "colorectal",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "imagenet-noise",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "imagenet-o",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        }
+    ],
+    "train_params": {
+        "num_epochs": 90,
+        "optimizer": "sgd",
+        "optimizer_params": {
+            "lr": 0.05,
+            "nesterov": false,
+            "momentum": 0.9,
+            "weight_decay": 0.0001
+        },
+        "lr_scheduler": "multistep",
+        "lr_scheduler_params": {
+            "milestones": [
+                30,
+                60
+            ],
+            "gamma": 0.1
+        }
+    },
+    "seed": null,
+    "data_parallel": true,
+    "gpu_id": [
+        0
+    ],
+    "test_params": {
+        "features": true,
+        "ood_data": true,
+        "ood_truncate": false,
+        "results_savedir": "/path/to/results",
+        "results_save": true,
+        "logits_save": true
+    }
+}

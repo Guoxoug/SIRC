@@ -1,0 +1,92 @@
+{
+    "model": {
+        "model_type": "resnet101v2",
+        "model_params": {
+            "num_classes": 1000
+        },
+        "pretrained_path": "models/saved_models/BiT-S-R101x1.npz",
+        "weights_path": "models/saved_models/resnet101v2_imagenet"
+    },
+    "id_dataset": {
+        "name": "imagenet",
+        "datapath": "/path/to/dataset",
+        "download": false,
+        "batch_size": 128,
+        "test_batch_size": 128,
+        "num_workers": 4,
+        "drop_last": false,
+        "val_size": 0,
+        "num_classes": 1000
+    },
+    "ood_datasets": [
+        {
+            "name": "openimage-o",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "inaturalist",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "textures",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "colonoscopy",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "colorectal",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "imagenet-noise",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "imagenet-o",
+            "datapath": "/path/to/dataset",
+            "download": false,
+            "test_batch_size": 128,
+            "num_workers": 4,
+            "drop_last": false
+        }
+    ],
+    "seed": null,
+    "data_parallel": false,
+    "gpu_id": [
+        0
+    ],
+    "test_params": {
+        "ood_data": true,
+        "ood_truncate": false,
+        "results_savedir": "/path/to/results",
+        "results_save": true,
+        "logits_save": true,
+        "features": true
+    }
+}
