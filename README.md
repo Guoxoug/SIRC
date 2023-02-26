@@ -1,14 +1,15 @@
 # Augmenting Softmax Information for Selective Classification with Out-of-Distribution Data
 
-This repository contains code for our paper accepted to ACCV 2022 (oral).
+This repository contains code for our paper that received the best paper award at ACCV 2022.
 If you found either the paper or the code useful please consider citing it:
 ```bibtex
-@article{Xia2022AugmentingSI,
-  title={Augmenting Softmax Information for Selective Classification with Out-of-Distribution Data},
-  author={Guoxuan Xia and Christos-Savvas Bouganis},
-  journal={ArXiv},
-  year={2022},
-  volume={abs/2207.07506}
+@InProceedings{Xia_2022_ACCV,
+    author    = {Xia, Guoxuan and Bouganis, Christos-Savvas},
+    title     = {Augmenting Softmax Information for Selective Classification with Out-of-Distribution Data},
+    booktitle = {Proceedings of the Asian Conference on Computer Vision (ACCV)},
+    month     = {December},
+    year      = {2022},
+    pages     = {1995-2012}
 }
 ```
 
