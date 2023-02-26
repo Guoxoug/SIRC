@@ -1,6 +1,6 @@
 # Augmenting Softmax Information for Selective Classification with Out-of-Distribution Data
 
-This repository contains code for our paper that received the best paper award at ACCV 2022.
+This repository contains code for [our paper](https://openaccess.thecvf.com/content/ACCV2022/html/Xia_Augmenting_Softmax_Information_for_Selective_Classification_with_Out-of-Distribution_Data_ACCV_2022_paper.html) that received the best paper award at ACCV 2022.
 If you found either the paper or the code useful please consider citing it:
 ```bibtex
 @InProceedings{Xia_2022_ACCV,
