@@ -20,6 +20,7 @@ data_paths = {
     "openimage-o": "/path/to/dataset", # needs datalist in folder
     "inaturalist": "/path/to/iNaturalist",
     "textures": "/path/to/dtd", # needs datalist in folder
+    "spacenet":"/path/to/spacenet1",
     "colonoscopy": "/path/to/dataset",
     "colorectal": "/path/to/Kather_texture_2016_image_tiles_5000",
     "imagenet-noise": "/path/to/dataset",

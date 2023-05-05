@@ -86,6 +86,7 @@ DATASET_NAME_TRANSFORM_MAPPING = {
     "colonoscopy": IMAGENET_TRANSFORMS,
     "openimage-o": IMAGENET_TRANSFORMS,
     "textures": IMAGENET_TRANSFORMS,
+    "spacenet": IMAGENET_TRANSFORMS
 }
 
 
@@ -106,6 +107,7 @@ DATA_NAME_MAPPING = {
     "textures":"Textures",
     "colonoscopy":"Colonoscopy",
     "imagenet-o": "ImageNet-O",
+    "spacenet": "SpaceNet",
 }
 
 
@@ -437,7 +439,7 @@ class Data:
             )
 
         if self.name in [
-            "inaturalist", "sun", "places", "colonoscopy"
+            "inaturalist", "colonoscopy", "spacenet"
         ]:
             # pass datapath directly to ImageFolder
             # these ones are 10,000 in size

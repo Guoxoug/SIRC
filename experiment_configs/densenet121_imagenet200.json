@@ -8,7 +8,7 @@
     },
     "id_dataset": {
         "name": "imagenet200",
-        "datapath": "/path/to/dataset",
+        "datapath": "/home/gx221/data/imagenet-bench",
         "download": false,
         "batch_size": 256,
         "test_batch_size": 512,
@@ -20,7 +20,7 @@
     "ood_datasets": [
         {
             "name": "near-imagenet200",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/imagenet-bench",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -28,7 +28,7 @@
         },
         {
             "name": "caltech256",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/imagenet-bench",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -36,7 +36,7 @@
         },
         {
             "name": "openimage-o",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/openimages",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -44,7 +44,15 @@
         },
         {
             "name": "inaturalist",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/iNaturalist",
+            "download": false,
+            "test_batch_size": 512,
+            "num_workers": 4,
+            "drop_last": false
+        },
+        {
+            "name": "spacenet",
+            "datapath": "/home/gx221/data/spacenet1",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -52,7 +60,7 @@
         },
         {
             "name": "textures",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/dtd",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -60,15 +68,15 @@
         },
         {
             "name": "colonoscopy",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/colonoscopy",
             "download": false,
             "test_batch_size": 512,
-            "num_workers": 4,
+            "num_workers": 0,
             "drop_last": false
         },
         {
             "name": "colorectal",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/Kather_texture_2016_image_tiles_5000",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -76,7 +84,7 @@
         },
         {
             "name": "imagenet-noise",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/noise",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -84,7 +92,7 @@
         },
         {
             "name": "imagenet-o",
-            "datapath": "/path/to/dataset",
+            "datapath": "/home/gx221/data/imagenet-o",
             "download": false,
             "test_batch_size": 512,
             "num_workers": 4,
@@ -118,7 +126,7 @@
         "features": true,
         "ood_data": true,
         "ood_truncate": false,
-        "results_savedir": "/path/to/results",
+        "results_savedir": "/home/gx221/sirc-extend-res",
         "results_save": true,
         "logits_save": true
     }

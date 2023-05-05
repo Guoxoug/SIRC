@@ -36,6 +36,7 @@ The datasets used in our work can be obtained by following the links and/or inst
 - [OpenImage-O](https://github.com/haoqiwang/vim): download the [test set](https://github.com/cvdfoundation/open-images-dataset) and place the datalist file `utils/openimages_datalist.txt` the level above the directory containing the images.
 - [iNaturalist](https://github.com/deeplearning-wisc/large_scale_ood)
 - [Textures](https://www.robots.ox.ac.uk/~vgg/data/dtd/): download the dataset and place `utils/textures_datalist.txt` the level above the directory containing the images.
+- [SpaceNet](https://spacenet.ai/spacenet-buildings-dataset-v1/): download the 3 band test data.
 - [Colonoscopy](http://www.depeca.uah.es/colonoscopy_dataset/): run `python utils/extract_frames.py <path/to/data_dir>` to download the videos and extract their frames to the specified directory.
 - [Colorectal](https://zenodo.org/record/53169#.Yr21hXbMJ3j)
 - Noise: run `python utils/generate_gaussian_noise.py <path/to/data_dir>` to generate the data and save it to the specified directory.

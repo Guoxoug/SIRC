@@ -4,12 +4,13 @@ features from different depths.
 """
 
 import numpy as np
+import torch
 import os
 import json 
-from tqdm import tqdm
-from argparse import ArgumentParser
-import torch
+import torch.nn.functional as F
 import torchvision as tv
+
+
 from models.model_utils import (
     model_generator, 
     load_weights_from_file,
@@ -19,6 +20,12 @@ from utils.data_utils import (
     Data,
     get_preprocessing_transforms
 )
+
+from utils.eval_utils import metric_stats, uncertainties
+
+from tqdm import tqdm
+
+from argparse import ArgumentParser
 
 from utils.train_utils import get_filename
 
@@ -238,26 +245,6 @@ model = model_generator(
     **config["model"]["model_params"]
 )
 
-# early exit
-# NB quantization is NOT supported
-if (
-    "early_exit_params" in config["model"]
-    and
-    config["model"]["early_exit_params"]
-):
-    model = add_exits(
-        model, config["model"]["model_type"],
-        config["model"]["model_params"],
-        config["model"]["early_exit_params"]
-    )
-
-    multihead = True
-    print("Using multiheaded network")
-
-
-else:
-    multihead = False
-    print("Using single network")
 
 # try and get weights 
 if args.weights_path is not None:

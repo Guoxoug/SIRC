@@ -148,7 +148,11 @@ MAX = 250000
 
 max_batches = int(np.ceil(MAX/id_data.train_loader.batch_size))
 rem = MAX % id_data.train_loader.batch_size
-# borrowed from test
+
+
+# samples for k nearest neighbours
+n_samples = 12500  # original paper uses 1% of the imagenet dataset
+
 def get_outputs_labels(model, loader, dev="cuda"):
     """Get the model outputs for a dataloader."""
     model.eval()
@@ -185,7 +189,7 @@ def get_outputs_labels(model, loader, dev="cuda"):
     return  labels, logits, features
 
 def get_params(model, id_data, dev="cuda"):
-    """Calculate params for vim and KL matching on training set."""
+    """Calculate params for vim and SIRC on training set."""
 
     print(f"eval on: {id_data.name} training set")
 
@@ -249,12 +253,28 @@ def get_params(model, id_data, dev="cuda"):
         "norm_R": R
     })
 
-
+    # knn params
+    knn_params_dict = {
+        # these are already shuffled by the trainloader
+        "features": features[:n_samples] 
+    }
 
     # training data stats
-    uncs = uncertainties(logits, features=features, vim_params=vim_params_dict)
+    uncs = uncertainties(
+        logits, 
+        features=features, 
+        vim_params=vim_params_dict,
+        knn_params=knn_params_dict
+    )
+
+
+    for k,v in uncs.items():
+        if torch.isnan(v).any():
+            print(f"{k} contains nan values")
+        if torch.isinf(v).any():
+            print(f"{k} contains inf values")
     stats = metric_stats(uncs)
-    return vim_params_dict, stats
+    return vim_params_dict, knn_params_dict, stats
 
 
 
@@ -268,26 +288,7 @@ model = model_generator(
     **config["model"]["model_params"]
 )
 
-# early exit
-# NB quantization is NOT supported
-if (
-    "early_exit_params" in config["model"]
-    and
-    config["model"]["early_exit_params"]
-):
-    model = add_exits(
-        model, config["model"]["model_type"],
-        config["model"]["model_params"],
-        config["model"]["early_exit_params"]
-    )
 
-    multihead = True
-    print("Using multiheaded network")
-
-
-else:
-    multihead = False
-    print("Using single network")
 
 # try and get weights 
 if args.weights_path is not None:
@@ -302,7 +303,7 @@ elif (
         config["model"]["weights_path"],
         get_filename(config, seed=config["seed"]) + ".pth"
     )
-# try:
+
 print(f"Trying to load weights from: {weights_path}\n")
 load_weights_from_file(model, weights_path)
 print("Loading successful")
@@ -318,17 +319,11 @@ else:
     except:
         W = model.state_dict()["classifier.weight"].detach().clone().cpu()
         b = model.state_dict()["classifier.bias"].detach().clone().cpu()
-# except:
-#     print("Failed to load weights, will be randomly initialised.")
 
-# # multigpu
-# model = torch.nn.DataParallel(model) if (
-#     config["data_parallel"] and torch.cuda.device_count() > 1
-# ) else model
 
 model.to(dev)
 # eval floating point model
-vim_params_dict, training_stats = get_params(
+vim_params_dict, knn_params_dict, training_stats = get_params(
     model, id_data
 )
 
@@ -347,7 +342,13 @@ if not os.path.exists(save_dir):
 
 savepath = os.path.join(save_dir, f"{filename}_vim{args.suffix}.pth")
 torch.save(vim_params_dict, savepath)
-print(f"vim and kl-matching params saved to {savepath}")
+print(f"vim params saved to {savepath}")
+
+savepath = os.path.join(save_dir, f"{filename}_knn{args.suffix}.pth")
+torch.save(knn_params_dict, savepath)
+print(f"knn params saved to {savepath}")
+
+
 
 # metrics stats
 savepath = os.path.join(save_dir, f"{filename}_train_stats{args.suffix}.pth")

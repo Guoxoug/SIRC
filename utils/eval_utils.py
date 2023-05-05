@@ -3,11 +3,13 @@ from scipy.stats import gaussian_kde
 from scipy.optimize import minimize
 from sklearn.metrics import roc_auc_score 
 from sklearn.metrics import precision_recall_curve
+import faiss
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from tqdm import tqdm
 import torch.nn.functional as F
+import gc
 
 # this is for plotting and latex tables
 METRIC_NAME_MAPPING = {
@@ -22,11 +24,18 @@ METRIC_NAME_MAPPING = {
     "vim":"ViM",
     "SIRC_MSP_z": "(MSP,$||\\b z||_1$)",
     "SIRC_MSP_res": "(MSP,Res.)",
+    "SIRC_MSP_knn": "(MSP,KNN)",
     "SIRC_doctor_z": "(DR,$||\\b z||_1$)",
     "SIRC_doctor_res": "(DR,Res.)",
+    "SIRC_doctor_knn": "(DR,KNN)",
     "SIRC_H_res": "($-\mathcal{H}$,Res.)",
     "SIRC_H_z": "($-\mathcal{H}$,$||\\b z||_1$)",
+    "SIRC_H_knn": "($-\mathcal{H}$,KNN)",
     "mahalanobis": "Mahal",
+    "knn": "KNN",
+    "SIRC_MSP_knn_res_z": "(MSP,KNN,Res.,$||\\b z||_1$)",
+    "SIRC_doctor_knn_res_z": "(DR,KNN,Res.,$||\\b z||_1$)",
+    "SIRC_H_knn_res_z": "($-\mathcal{H}$,KNN,Res.,$||\\b z||_1$)",
 }
 
 def get_metric_name(unc):
@@ -53,10 +62,35 @@ def sirc(s1, s2, a,b, s1_max=1):
     )
     return - soft - additional # return as confidence
 
+def extended_sirc(
+    s1, s2s, ass, bs, 
+    s1_max=1
+):
+    "Combine 3 confidence metrics with SIRC."
+    # use logarithm for stability
+    # s1 contribution
+    score = (s1_max - s1).log() 
+    assert len(s2s) == len(ass) and len(s2s) == len(bs)
+    
+    # s2s contributions
+
+    for i in range(len(s2s)):
+        add = torch.logaddexp(
+            torch.zeros(len(s2s[i])),
+            -bs[i] * (s2s[i] - ass[i])
+        ) 
+
+        score = score + add
+
+    return -score   # return as confidence
+
+
+
+
 def uncertainties(
     logits: torch.Tensor, 
     features=None, 
-    gmm_params=None, vim_params=None,
+    gmm_params=None, vim_params=None, knn_params=None,
     stats=None
 ) -> dict:
     """Calculate uncertainty measures given tensors of logits and features.
@@ -154,36 +188,109 @@ def uncertainties(
             # subtract energy
             uncertainty["residual"] = vlogits
             uncertainty["vim"] = vlogits - torch.logsumexp(logits, dim=-1)
+        if knn_params is not None:
+            print("KNN start")
+            K = 10  # taken from https://github.com/deeplearning-wisc/knn-ood/blob/master/run_imagenet.py
+            # in our case we have 12500 samples, 
+            # so we scale down the number of neighbours
+            # original paper divides by l2 norm and then calculates
+            # euclidean distance
+            # this is the same as cosine similarity 
+            knn_feats = F.normalize(
+                knn_params["features"], dim=-1, p=2
+            ).cpu().numpy()
+
+            # create index with vector dimensionality
+
+            index = faiss.IndexFlatL2(knn_feats.shape[-1])
+            # gpu_index = faiss.index_cpu_to_gpu(res, 0, index)
+            print("adding features to index")
+            index.add(knn_feats)
+
+            normed_features = F.normalize(
+                features, dim=-1, p=2
+            ).cpu().numpy()
+            
+            # distances of K nearest neighbours
+            # sorted ascending
+            print("KNN search")
+            D, _ = index.search(normed_features, K)
+
+            # uncertainty
+            knn = torch.tensor(D[:, -1])
+            uncertainty["knn"] = knn
+            
+            # manual garbage collection, otherwise run out of vram
+            del index
+            gc.collect()    
 
         if stats is not None:
 
             # feature norm
-            a, b = get_sirc_params(stats["feature_norm"])
+            feat_a, feat_b = get_sirc_params(stats["feature_norm"])
 
             uncertainty[f"SIRC_H_z"] = - sirc(
-                -ent, feature_norm, a, b, s1_max=0
+                -ent, feature_norm, feat_a, feat_b, s1_max=0
             )
             uncertainty[f"SIRC_MSP_z"] = - sirc(
-                conf, feature_norm, a, b, s1_max=1
+                conf, feature_norm, feat_a, feat_b, s1_max=1
             )
             uncertainty[f"SIRC_doctor_z"] = - sirc(
-                -doctor, feature_norm, a, b, s1_max=1
+                -doctor, feature_norm, feat_a, feat_b, s1_max=1
             )
 
             if vim_params is not None:
-                a, b = get_sirc_params(stats["residual"])
+                res_a, res_b = get_sirc_params(stats["residual"])
 
                 uncertainty[f"SIRC_H_res"] = -sirc(
-                    -ent, -vlogits, a, b, s1_max=0
+                    -ent, -vlogits, res_a, res_b, s1_max=0
                 )
                 uncertainty[f"SIRC_MSP_res"] = -sirc(
-                    conf, -vlogits, a, b, s1_max=1
+                    conf, -vlogits, res_a, res_b, s1_max=1
                 )
 
                 uncertainty[f"SIRC_doctor_res"] = -sirc(
-                    -doctor, -vlogits, a, b, s1_max=1
+                    -doctor, -vlogits, res_a, res_b, s1_max=1
                 )
 
+            if knn_params is not None:
+                knn_a, knn_b = get_sirc_params(stats["knn"])
+
+                uncertainty[f"SIRC_H_knn"] = -sirc(
+                    -ent, -knn, knn_a, knn_b, s1_max=0
+                )
+                uncertainty[f"SIRC_MSP_knn"] = -sirc(
+                    conf, -knn, knn_a, knn_b, s1_max=1
+                )
+
+                uncertainty[f"SIRC_doctor_knn"] = -sirc(
+                    -doctor, -knn, knn_a, knn_b, s1_max=1
+                )
+
+
+            # SIRC+
+            if knn_params is not None and vim_params is not None:
+                uncertainty[f"SIRC_MSP_knn_res_z"] = -extended_sirc(
+                    conf,
+                    [feature_norm, -vlogits, -knn],
+                    [feat_a, res_a, knn_a], [feat_b, res_b, knn_b],
+                    s1_max=1
+                )
+                # try combining
+                uncertainty[f"SIRC_H_knn_res_z"] = -extended_sirc(
+                    -ent,
+                    [feature_norm, -vlogits, -knn],
+                    [feat_a, res_a, knn_a], [feat_b, res_b, knn_b],
+                    s1_max=0
+                )
+
+                uncertainty[f"SIRC_doctor_knn_res_z"] = -extended_sirc(
+                    -doctor,
+                    [feature_norm, -vlogits, -knn],
+                    [feat_a, res_a, knn_a], [feat_b, res_b, knn_b],
+                    s1_max=1
+                )
+ 
     return uncertainty
 
 

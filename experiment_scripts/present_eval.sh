@@ -5,16 +5,21 @@ cd ..
 config_path=experiment_configs/mobilenetv2_imagenet200.json
 python plot_vary_sc_params.py  $config_path --num_runs 5 
 python plot_ood_sc_comp.py $config_path 5
+python plot_over_datasets.py $config_path 5
 
 
 config_path=experiment_configs/resnet50_imagenet200.json
 python plot_vary_sc_params.py  $config_path --num_runs 5  
 python plot_ood_sc_comp.py $config_path 5
+python plot_over_datasets.py $config_path 5
+
 
 
 config_path=experiment_configs/densenet121_imagenet200.json
 python plot_vary_sc_params.py  $config_path --num_runs 5 
 python plot_ood_sc_comp.py $config_path 5
+python plot_over_datasets.py $config_path 5
+
 
 config_path=experiment_configs/densenet121_imagenet.json
 python plot_ood_sc_comp.py $config_path 1 --seed 0

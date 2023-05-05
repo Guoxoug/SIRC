@@ -9,10 +9,10 @@ from argparse import ArgumentParser
 import json
 from utils.train_utils import get_filename
 from utils.eval_utils import METRIC_NAME_MAPPING
-import os
 import matplotlib.pyplot as plt
-import matplotlib as mpl
 import seaborn as sns
+import os
+sns.set_theme()
 
 parser = ArgumentParser()
 parser.add_argument(
@@ -36,23 +36,49 @@ parser.add_argument(
 )
 
 parser.add_argument(
+    "--std",
+    type=int,
+    default=1,
+    help=(
+        "whether to print stds or not"
+    )
+)
+
+parser.add_argument(
     "--seeds",
     default=None,
     type=str,
     help="string containing random seeds, overrides default 1 to num_runs."
 )
 
+parser.add_argument(
+    "--problem",
+    default="SCOD",
+    choices=["SCOD", "OOD"],
+    type=str
+)
+
+parser.add_argument(
+    "--suffix",
+    default="",
+    type=str
+)
 
 args = parser.parse_args()
 
-metrics = ["errFPR@95", " FPR@95"]
+# decide how to bold metrics
+if args.problem == "SCOD":
+    metrics = ["errROC", "errFPR@95"]
+else:
+    metrics = [" ROC", " FPR@95"] # space needed
 
 EVAL_MAPPING = {
-    "errROC": r"\%AUROC$\uparrow$",
-    "ROC": r"\%AUROC$\uparrow$",
-    "errFPR@95": r"FPR@95$\downarrow$",
-    "FPR@95": r"FPR@95$\downarrow$"
+    "errROC": r"$\Delta$%AUROC$\rightarrow$",
+    "ROC": r"$\Delta$%AUROC$\rightarrow$",
+    "errFPR@95": r"$\Delta$%FPR@95$\leftarrow$",
+    "FPR@95": r"$\Delta$%FPR@95$\leftarrow$"
 }
+higher = [True, False]
 
 # load config
 config = open(args.config_path)
@@ -75,31 +101,22 @@ else:
 
 # metrics we care about
 metrics_of_interest = [
-    "SIRC_MSP_z",
-    "SIRC_MSP_res",
-    "SIRC_MSP_knn",
-    "SIRC_doctor_z",
-    "SIRC_doctor_res",
-    "SIRC_doctor_knn",
-    # "SIRC_MSP_knn_res_z",
+    "entropy",
     "SIRC_H_z",
     "SIRC_H_res",
     "SIRC_H_knn",
-    
-    # "SIRC_doctor_knn_res_z",
-    # "SIRC_H_knn_res_z",
-    "confidence",
-    "doctor",
-    "entropy",
-    "feature_norm",
-    "residual",
-    "knn",
-    "max_logit",
-    "energy",
-    "gradnorm",
-    "vim",
-    "mahalanobis",    
+    "SIRC_H_knn_res_z",
+
 ]
+
+# metrics_of_interest = [
+#     "confidence",
+#     "SIRC_MSP_z",
+#     "SIRC_MSP_res",
+#     "SIRC_MSP_knn",
+#     "SIRC_MSP_knn_res_z",
+
+# ]
 
 
 # reformatting function
@@ -113,14 +130,16 @@ def rearrange_df(df, cols_to_drop, datasets_to_drop=[]):
         col for col in df.columns
         if
         any(data_name in col for data_name in datasets_to_drop)
+        and "fix" not in col
         or "-c" in col
         or "-r" in col
+        
     ]
     df.drop(data_cols_to_drop, axis=1, inplace=True, errors="ignore")
 
     # drop shifted rows
     df.dropna(axis=1, inplace=True)
-
+    
     df = df.transpose().reset_index(level=0)
     df.columns = ["data-method", "performance"]
     df[["data", "method"]] = df["data-method"].str.rsplit(
@@ -164,7 +183,7 @@ def rearrange_df(df, cols_to_drop, datasets_to_drop=[]):
 
     return df
 
-# get only 1st row, outputs as a series so need to do a bit of messing around
+# get only FP row, outputs as a series so need to do a bit of messing around
 dfs = [
     pd.DataFrame(
         pd.read_csv(
@@ -182,10 +201,14 @@ dfs = [
     seeds
 ]
 
-# concatenate together
+# concatenate into a big boi
 df = pd.concat(dfs)
-# get mean and standard deviation over training runs
+df.drop(columns=df.filter(regex = 'risk').columns, errors="ignore", inplace=True)
+df.drop(columns=df.filter(regex = 'cov').columns, errors="ignore", inplace=True)
+
+# get mean and standard deviation over runs
 df = df.astype(float)
+
 mean = df.groupby(df.index).mean()
 std = df.groupby(df.index).std()
 id_mean = mean[["top1", "top5", "nll"]]
@@ -194,11 +217,14 @@ id_std = std[["top1", "top5", "nll"]]
 
 mean_std = pd.concat([mean, std])
 
-dfs = []
-for i in range(2):
 
-    res = df.groupby(df.index).mean()
+
+fig, axes = plt.subplots(2,1, figsize=(10,8), sharex=True)
+for i, ax in enumerate(axes):
+
     mean = df.groupby(df.index).mean()
+    # res = pd.DataFrame(mean_std.apply(mean_std_format, axis=0)).transpose()
+    res = mean.copy(deep=True)
     print("="*80)
 
     cols_to_drop = [
@@ -207,25 +233,25 @@ for i in range(2):
     ] + ["seed"] 
 
     data_to_drop = [
-        # option to exclude certain datasets
+        "danbooru", "imagenet-r", "food101", "sun", "places365", "solarcells"
     ]
 
     res = rearrange_df(res, cols_to_drop, datasets_to_drop=data_to_drop)
     mean = rearrange_df(mean, cols_to_drop, datasets_to_drop=data_to_drop)
-    # exclude MD column from mean
-    if i==0:
-        print(mean.columns)
+
+
+    if args.problem == "SCOD":
+ 
         mean = mean.loc[:, mean.columns != "ID\\xmark"].mean(axis=1)
-        res.insert(1,"OOD mean",mean)
+
     else:
         mean = mean.mean(axis=1)
-        res.insert(0,"OOD Detection mean",mean)
+    mean = mean.loc[metrics_of_interest]
+   
+    high = higher[i]
+
     res = res.loc[metrics_of_interest]
     res = res.transpose()
-    if not i:
-        res = res.loc[["ID\\xmark", "OOD mean"]]
-    else:
-        res = pd.DataFrame(res.loc["OOD Detection mean"]).transpose()
 
     # make text nicer
     res.columns = [
@@ -233,89 +259,122 @@ for i in range(2):
         if colname in METRIC_NAME_MAPPING else colname.replace("_", " ")
         for colname in res.columns
     ]
-    dfs.append(res)
-idx = res.index
-res = pd.concat(dfs, axis=0)
 
-# get rid of components 
-# keep only full detection methods
-res = res.sub(res["MSP"], axis=0).drop(
-    ["MSP", "Residual", "$||\\b z||_1$"], axis=1
-)
-x_labels = res.columns
-res.index.name = "separation"
+    # print(res)
+
+    
+    x_labels = res.index.tolist()
+    x_labels[0] = "ID✘"
+    res.index=x_labels
+    scores = [score.replace("\\b", "") for score in res.columns]
+    res.columns = scores
+    for j,col in enumerate(res.columns):
+        if j == 0:
+            col1 = col
+            continue
+        alpha = 1  if j == len(res.columns) -1 else 0.6
+
+        if j == len(res.columns) -1:
+            label = f"{scores[j]}"
+        else:
+            label = scores[j]
+        if j ==1:
+            empty, = ax.plot(
+                [],[],
+                label="SIRC",
+                linestyle=""
+            )
+        if j == len(res.columns) -1:
+            empty, = ax.plot(
+                [],[],
+                label="SIRC+",
+                linestyle=""
+            )
+        if j == 1 or j == len(res.columns) - 1:
+            ax.plot(
+                x_labels,
+                res[col] - res[col1],
+                label=label,
+                linestyle="-",
+                marker="o", 
+                alpha=alpha,
+                color=empty.get_color()
+            )
+        else:
+            ax.plot(
+                x_labels,
+                res[col] - res[col1],
+                label=label,
+                linestyle="-",
+                marker="o", 
+                alpha=alpha
+            )
+        ax.set_xticklabels(["\n"*(i%2) + l for i,l in enumerate(x_labels)])
+    if i == 0:
+        ax.legend()
+    ax.set_ylabel(f"{EVAL_MAPPING[metrics[i]]}\n(from {scores[0]})")
+    ax.minorticks_on()
+
+    ax.grid(visible=True, which='minor', color='w', linewidth=0.5, axis="both")
+    fig.tight_layout()
+    spec = get_filename(config, seed=None)
+    save_dir = os.path.join(config["test_params"]["results_savedir"], spec)
+    filename = get_filename(config, seed=config["seed"]) +  \
+    f"_over_data_{metrics[i]}_{metrics_of_interest[0]}" + f"_2D"\
+    + args.suffix + ".pdf"
+    path = os.path.join(save_dir, filename)
+    fig.savefig(path)
+    print(f"figure saved to:\n{path}")
+
+
+# single score for illustrative purposes
+
+fig, ax = plt.subplots(1,1, figsize=(5,4))
+
+res=res.sub(
+    res[scores[0]], axis=0
+).drop([scores[0],scores[-1]], axis=1, errors="ignore")
+
+x_labels = [x_labels[i] for i in [0,3,4,6,7,-1]]
+res.index.name="data"
+res = res.iloc[[0,3,4,6,7,-1]]
 res.reset_index(inplace=True)
-res.loc[len(res)] = 0.0
-res.loc[len(res)] = 0.0
-res.loc[len(res)] = 0.0
-res.iloc[5, 0] = 1.0
-res.iloc[4, 0] = 2.0
-# this is just inserting a gap into the barplot
-res = res.reindex([5, 0,1, 3,2,4])
+res.columns.name="method"
+# print(res)
+val_name = f"{EVAL_MAPPING[metrics[-1]]}\n(from {scores[0]})"
 
 res = res.melt(
-    id_vars=["separation"], var_name="method", value_name="$\\Delta$%FPR@95$\leftarrow$\n(from MSP baseline)"
+    id_vars=["data"], 
+    var_name="method", 
+    value_name=val_name
+        
 )
-def clean_strings(x):
-    mapping = {
-        "ID\\xmark": "ID✗|ID✓",
-        "OOD mean": "OOD|ID✓",
-        "OOD Detection mean": "OOD|ID"
-    }
-    if x in mapping:
-        return mapping[x]
-    elif type(x) == str:
-        return x.replace("\\b", "")
-    else: 
-        return x
-res["separation"] = res["separation"].apply(clean_strings)
-res["method"] = res["method"].apply(clean_strings)
-
-sns.set_theme()
-fig, ax = plt.subplots(1,1,figsize=(15,3))
-
 sns.barplot(
     ax=ax,
     data=res,
-    x="method",
-    y="$\\Delta$%FPR@95$\leftarrow$\n(from MSP baseline)",
-    hue="separation",
-    palette=["white","indianred", "yellowgreen", "white", "darkolivegreen",],
+    x="data",
+    y=val_name,
+    hue="method",
     alpha=0.5,
 )
 
-h, l = ax.get_legend_handles_labels()
-ax.legend(h[1:3] + [h[4]], l[1:3]+[l[4]])
-sns.move_legend(
-    ax,
-    "lower center",
-    bbox_to_anchor=(.5, 0.95), ncol=3, title=None, frameon=False,
-)
-ax.get_yaxis().set_minor_locator(mpl.ticker.AutoMinorLocator())
-ax.grid(visible=True, which='minor', lw=0.5)
-ax.annotate(
-    'SIRC', 
-    xy=(0.262, .55), 
-    xytext=(0.262, .7), 
-    xycoords='axes fraction', 
-    ha='center', va='bottom',
-    arrowprops=dict(
-                arrowstyle='-[, widthB=21, lengthB=1.0', 
-                lw=2, 
-                color="slategrey"
-        ), 
-    color="slategrey"
-
-)
-x_labels = [clean_strings(lab) for lab in x_labels]
 ax.set_xticklabels(["\n"*(i%2) + l for i,l in enumerate(x_labels)])
+ax.set_title(f"SIRC vs {scores[0]}")
+ax.legend()
+ax.set_xlabel("")
+ax.minorticks_on()
+ax.grid(visible=True, which='minor', color='w', linewidth=0.5, axis="both")
 fig.tight_layout()
-
- # specify filename
 spec = get_filename(config, seed=None)
 save_dir = os.path.join(config["test_params"]["results_savedir"], spec)
 filename = get_filename(config, seed=config["seed"]) +  \
-    f"_bar_ood_sc_full.pdf"
+f"_over_data_{metrics[i]}_{metrics_of_interest[0]}" + f"_single"\
++ args.suffix + ".pdf"
 path = os.path.join(save_dir, filename)
 fig.savefig(path)
 print(f"figure saved to:\n{path}")
+
+
+
+
+

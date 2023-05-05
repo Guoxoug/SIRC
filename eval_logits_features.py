@@ -157,6 +157,22 @@ try:
 except:
     vim_params = None
 
+# knn params -----------------------------------------------------------------
+try:
+    results_path = os.path.join(
+        config["test_params"]["results_savedir"],
+        get_filename(config, seed=None)
+    )
+    knn_path = os.path.join(
+        results_path,
+        get_filename(config, seed=config["seed"]) + "_knn.pth"
+    )
+    knn_params = torch.load(knn_path)
+
+except:
+    knn_params = None
+
+
 # training set stats ------------------------
 
 try:
@@ -213,7 +229,7 @@ def evaluate(
         logits, 
         features=features, 
         gmm_params=gmm_params,
-        vim_params=vim_params,
+        vim_params=vim_params, knn_params=knn_params,
         stats=train_stats
     )
     res = {
@@ -278,7 +294,7 @@ def evaluate(
             metrics = uncertainties(
                 combined_logits, 
                 features=combined_features, gmm_params=gmm_params,
-                vim_params=vim_params,
+                vim_params=vim_params, knn_params=knn_params,
                 stats=train_stats
             )
 
@@ -339,7 +355,7 @@ def evaluate(
             metrics = uncertainties(
                 combined_logits, 
                 features=combined_features, gmm_params=gmm_params,
-                vim_params=vim_params,
+                vim_params=vim_params, knn_params=knn_params,
                 stats=train_stats
             )
 

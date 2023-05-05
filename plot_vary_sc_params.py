@@ -168,6 +168,19 @@ if generate_data:
     except:
         vim_params = [None for seed in seeds]
         print(f"could not load vim params")
+    try:
+        knn_paths = [
+            os.path.join(
+                results_path, get_filename(config, seed=seed) + "_knn.pth"
+            )  # results_savedir/arch_dataset/arch_dataset_seed_knn.pth
+            for seed in seeds
+        ]
+        knn_params = [torch.load(path) for path in knn_paths]
+        print(f"knn params loaded")
+
+    except:
+        knn_params = [None for seed in seeds]
+        print(f"could not load knn params")
 
     # stats of scores on training set
     try:
@@ -178,11 +191,11 @@ if generate_data:
             for seed in seeds
         ]
         stats = [torch.load(path) for path in stats_paths]
-        print(f"vim params loaded")
+        print(f"stats loaded")
 
     except:
         stats = [None for seed in seeds]
-        print(f"could not load vim params")
+        print(f"could not load stats")
 
 
     # data stuff
@@ -224,7 +237,8 @@ def get_uncs(logits, features=None, idx=0):
         data = {
             data_name: uncertainties(
                 logits[data_name], features=features[data_name],
-                gmm_params=gmm_params[idx], vim_params=vim_params[idx],
+                gmm_params=gmm_params[idx], vim_params=vim_params[idx], 
+                knn_params=knn_params[idx],
                 stats=stats[idx]
             )
             for data_name in logits.keys()
@@ -374,6 +388,7 @@ uncs = [
     "confidence",
     "SIRC_H_z",
     "SIRC_H_res",
+    "SIRC_H_knn_res_z",
     "SIRC_MSP_z",
     "SIRC_MSP_res",
     "doctor",
@@ -627,6 +642,7 @@ if generate_data:
 uncs = [
     "confidence",
     "SIRC_H_res",
+    "SIRC_H_knn_res_z",
     "energy",
     "vim"
 ]
@@ -634,16 +650,19 @@ uncs = [
 sns.set_palette([
     "royalblue",
     "seagreen",
+    "seagreen",
     "indianred",
     "darkorange"
 ])
-fig, axes = plt.subplots(3,4, figsize=(10,7), sharex="col", sharey="row")
-
+fig, axes = plt.subplots(3,4, figsize=(10,6), sharex="col", sharey="row")
+linestyles=["-", "-", "--", "-", "-"]
 def plot_uncs_over_param(ax, sc_perf, param):
-    for metric in uncs:
+    for i,metric in enumerate(uncs):
         if uncs is not None and metric not in uncs:
             continue
-        if "SIRC" in metric:
+        if "knn_res" in metric:
+            extra = "SIRC+ "
+        elif "SIRC" in metric:
             extra = "SIRC "
         elif metric == "confidence":
             extra = "Baseline - "
@@ -654,11 +673,18 @@ def plot_uncs_over_param(ax, sc_perf, param):
         if unc_perf.shape[0] > 1:
             mean = unc_perf.mean(axis=0) 
             std = unc_perf.std(axis=0) 
-            ax.plot(param, mean, label=extra + f"{metric}", alpha=.5)
+            ax.plot(
+                param, mean, 
+                label=extra + f"{metric}", alpha=.5, linestyle=linestyles[i]
+            )
             if args.std:
                 ax.fill_between(param, mean-1*std, mean + 1*std, alpha=0.15)
         else:
-            ax.plot(ratio, unc_perf[0], label=extra + f"{metric}")
+            ax.plot(
+                ratio, unc_perf[0], 
+                label=extra + f"{metric}",
+                linestyle=linestyles[i]
+            )
 
     ax.get_xaxis().set_minor_locator(mpl.ticker.AutoMinorLocator())
     ax.get_yaxis().set_minor_locator(mpl.ticker.AutoMinorLocator())
@@ -718,12 +744,12 @@ for j, eval_metric in enumerate(eval_metrics):
         
 # axes[1][0].set_xlim(xmax=0.12) # tweak
 h, l = axes[0][0].get_legend_handles_labels()
-order = [2,0,1,3]
-order = [0,1,2,3]
-h, l = [h[i] for i in order], [l[i] for i in order]
+# order = [2,0,1,3]
+# order = [0,1,2,3]
+# h, l = [h[i] for i in order], [l[i] for i in order]
 fig.tight_layout()
 fig.legend(h, l, ncol=len(uncs), bbox_to_anchor=(0.5, 1), loc="upper center")
-plt.subplots_adjust(top=0.85, bottom=0.1, wspace=0.1, right=.99, left=0.07)
+plt.subplots_adjust(top=0.89, bottom=0.09, wspace=0.05, hspace=0.05, right=.99, left=0.07)
 
 
     

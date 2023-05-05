@@ -104,15 +104,23 @@ else:
 metrics_of_interest = [
     "SIRC_MSP_z",
     "SIRC_MSP_res",
+    "SIRC_MSP_knn",
     "SIRC_doctor_z",
     "SIRC_doctor_res",
+    "SIRC_doctor_knn",
     "SIRC_H_z",
     "SIRC_H_res",
+    "SIRC_H_knn",
+    "SIRC_MSP_knn_res_z",
+    "SIRC_doctor_knn_res_z",
+    "SIRC_H_knn_res_z",
+    
     "confidence",
     "doctor",
     "entropy",
     "feature_norm",
     "residual",
+    "knn",
     "max_logit",
     "energy",
     "gradnorm",
@@ -314,17 +322,29 @@ def tidy_idx_cls(df):
     )
     # comb1 = pd.concat({config["model"]["model_type"]: comb1}, names=["model"])
     df_idx = df.index.to_frame(name="\\textbf{Method}")
+    side_cat = []
+    for metric in df_idx.iloc[:,0]:
+        if "KNN," in metric:
+            side_cat.append("\\begin{sideways}\\textbf{SIRC+}\\end{sideways}")
+        elif "(" in metric:
+            side_cat.append("\\begin{sideways}\\textbf{SIRC}\\end{sideways}")
+        else:
+            side_cat.append("")
     df_idx.insert(
-        0, "", 
-        [
-            "\\begin{sideways}\\textbf{SIRC}\\end{sideways}"
-            if "(" in metric else "" for metric in df_idx.iloc[:,0]
-        ]
+        0, "", side_cat
+        # [
+        #     "\\begin{sideways}\\textbf{SIRC}\\end{sideways}"
+        #     if "(" in metric else "" for metric in df_idx.iloc[:,0]
+        # ]
     )
     df.index = pd.MultiIndex.from_frame(df_idx)
     df_idx = df.index.to_frame()
+
+
+    side_cat = []
+
     df_idx.insert(
-        0, "\\textbf{Model}", 
+        0, "\\textbf{Model}",
         [
             f'\\begin{{sideways}}\\shortstack[l]{{\\textbf{{{MODEL_NAME_MAPPING[config["model"]["model_type"]]}}} \\\\ ID \\%Error: {id_mean["top1"][0]:.2f}}}\\end{{sideways}}' 
             for metric in df_idx.iloc[:,0]
@@ -344,7 +364,7 @@ if config["id_dataset"]["name"] in ["imagenet200"] and args.latex:
         'Caltech-45', 'Openimage-O', "iNaturalist"
     ]
     data_names2 = [
-        "ID\\xmark", "Textures", 'Colonoscopy', 
+        "Textures", "SpaceNet", 'Colonoscopy', 
         'Colorectal', 'Noise', 'ImageNet-O'
     ]
     comb1 = comb[data_names1]
